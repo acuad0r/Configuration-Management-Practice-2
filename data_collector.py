@@ -72,7 +72,7 @@ def print_dependencies(dependencies, package_name):
     print("=" * 60)
     
     if not dependencies:
-        print("❌ Зависимости не найдены")
+        print("Зависимости не найдены")
         return
     
     for i, dep in enumerate(dependencies, 1):
