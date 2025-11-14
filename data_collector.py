@@ -56,7 +56,7 @@ class CargoDataCollector:
             
             return dependencies
         else:
-            print(f"⚠️  Пакет {config.package_name} не найден в тестовых данных")
+            print(f"Пакет {config.package_name} не найден в тестовых данных")
             return [
                 Dependency(name="example_dep1", version="1.0", is_optional=False),
                 Dependency(name="example_dep2", version="2.0", is_optional=True),
@@ -80,7 +80,7 @@ def print_dependencies(dependencies, package_name):
         print(f"{i:2d}. {dep.name:25} {dep.version:15} {optional_flag}")
     
     print("=" * 60)
-    print(f"✅ Всего зависимостей: {len(dependencies)}")
+    print(f"Всего зависимостей: {len(dependencies)}")
 
 
 def main_stage_2():
@@ -98,11 +98,11 @@ def main_stage_2():
         
         print_dependencies(dependencies, config.package_name)
         
-        print("\n✅ Этап 2 завершен успешно!")
+        print("\nЭтап 2 завершен успешно!")
         return dependencies
         
     except Exception as e:
-        print(f"❌ Ошибка на этапе 2: {e}")
+        print(f"Ошибка на этапе 2: {e}")
         return []
 
 
