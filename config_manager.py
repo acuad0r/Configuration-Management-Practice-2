@@ -137,11 +137,11 @@ def main_stage_1():
         config = ConfigManager.load_config()
         config.validate()
         print_config(config)
-        print("\n✅ Конфигурация успешно загружена и проверена!")
+        print("\nКонфигурация успешно загружена и проверена!")
         print("Этап 1 завершен успешно.")
         
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
+        print(f"Ошибка: {e}")
         sys.exit(1)
 
 
