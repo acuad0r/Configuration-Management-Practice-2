@@ -67,10 +67,10 @@ def main_stage_3():
         
         visualizer.save_graph(graph_text, config.output_filename)
         
-        print("\n✅ Этап 3 завершен успешно!")
+        print("\nЭтап 3 завершен успешно!")
         
     except Exception as e:
-        print(f"❌ Ошибка на этапе 3: {e}")
+        print(f"Ошибка на этапе 3: {e}")
 
 
 def demonstrate_multiple_packages():
