@@ -65,14 +65,14 @@ def test_error_cases():
         try:
             config = ConfigManager.load_config(filename)
             config.validate()
-            print(f"❌ Тест '{test_case['name']}': Ожидалась ошибка, но валидация прошла успешно")
+            print(f"Тест '{test_case['name']}': Ожидалась ошибка, но валидация прошла успешно")
         except ValueError as e:
             if test_case['expected_error'] in str(e):
-                print(f"✅ Тест '{test_case['name']}': Ошибка обработана корректно")
+                print(f"Тест '{test_case['name']}': Ошибка обработана корректно")
             else:
-                print(f"❌ Тест '{test_case['name']}': Неожиданное сообщение об ошибке: {e}")
+                print(f"Тест '{test_case['name']}': Неожиданное сообщение об ошибке: {e}")
         except Exception as e:
-            print(f"❌ Тест '{test_case['name']}': Неожиданная ошибка: {e}")
+            print(f"Тест '{test_case['name']}': Неожиданная ошибка: {e}")
         finally:
             # Удаление тестового файла
             if os.path.exists(filename):
