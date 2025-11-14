@@ -1,0 +1,8 @@
+parameter,value
+package_name,serde
+repository_url,https://github.com/serde-rs/serde
+use_test_repository,false
+package_version,1.0.200
+output_filename,dependencies_graph.png
+max_depth,2
+filter_substring,
