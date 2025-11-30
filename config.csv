@@ -1,8 +1,8 @@
-parameter,value
-package_name,serde
-repository_url,https://github.com/serde-rs/serde
-use_test_repository,false
-package_version,1.0.200
-output_filename,dependencies_graph.png
-max_depth,2
-filter_substring,
+key,value
+package_name,ignore
+repo,https://raw.githubusercontent.com/BurntSushi/ripgrep/master/Cargo.lock
+mode,url
+version,0.4.25
+output,graph
+deep,3
+filter,
