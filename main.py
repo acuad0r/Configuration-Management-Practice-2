@@ -1,58 +1,85 @@
 #!/usr/bin/env python3
-"""
-Главный файл инструмента визуализации графа зависимостей
-Объединяет все три этапа
-"""
 
+import argparse
 import sys
-from config_manager import ConfigManager, print_config
-
+import os
+from utils import (
+    read_config_csv,
+    validate_config,
+    fetch_repo,
+    find_package_cargo,
+    parse_cargo_toml_for_deps,
+    build_dot,
+    save_dot_and_png,
+)
 
 def main():
-    """Главная функция, объединяющая все три этапа"""
-    print("=" * 70)
-    print("ИНСТРУМЕНТ ВИЗУАЛИЗАЦИИ ГРАФА ЗАВИСИМОСТЕЙ CARGO ПАКЕТОВ")
-    print("=" * 70)
-    
-    if len(sys.argv) > 1 and sys.argv[1] == "--demo":
-        try:
-            from visualizer import demonstrate_multiple_packages
-            demonstrate_multiple_packages()
-            return
-        except ImportError as e:
-            print(f"Ошибка импорта: {e}")
-            return
-    
+    parser = argparse.ArgumentParser(description="Rust dependency visualizer (Cargo)")
+    parser.add_argument("-c", "--config", required=True, help="Path to config.csv")
+    args = parser.parse_args()
+
+    # === ЭТАП 1: Чтение и вывод параметров ===
     try:
-        # Этап 1: Конфигурация
-        print("\nЭТАП 1: Конфигурация")
-        print("-" * 40)
-        
-        config = ConfigManager.load_config()
-        config.validate()
-        print_config(config)
-        
-        # Этап 2: Сбор данных
-        print("\nЭТАП 2: Сбор данных о зависимостях")
-        print("-" * 40)
-        
-        from data_collector import main_stage_2
-        dependencies = main_stage_2()
-        
-        # Этап 3: Визуализация
-        print("\nЭТАП 3: Визуализация графа")
-        print("-" * 40)
-        
-        from visualizer import main_stage_3
-        main_stage_3()
-        
-        print("\n" + "=" * 70)
-        print("ВСЕ ЭТАПЫ ЗАВЕРШЕНЫ УСПЕШНО!")
-        print("=" * 70)
-        
+        cfg = read_config_csv(args.config)
     except Exception as e:
-        print(f"\nКритическая ошибка: {e}")
-        sys.exit(1)
+        print(f"[ERROR] reading config: {e}", file=sys.stderr)
+        sys.exit(2)
+
+    print("\n=== CONFIG PARAMETERS ===")
+    for k, v in cfg.items():
+        print(f"{k} = {v}")
+    print("==========================\n")
+
+    try:
+        validate_config(cfg)
+    except Exception as e:
+        print(f"[ERROR] Config: {e}")
+        sys.exit(3)
+
+    # === ЭТАП 2: Работа с репозиторием ===
+    try:
+        repo_path, cleanup_cb = fetch_repo(cfg["repo"], cfg["mode"], cfg.get("version"))
+    except Exception as e:
+        print(f"[ERROR] fetch_repo: {e}")
+        sys.exit(4)
+
+    try:
+        cargo_path = find_package_cargo(repo_path, cfg.get("name"), cfg.get("version"))
+    except Exception as e:
+        cleanup_cb()
+        print(f"[ERROR] find_package_cargo: {e}")
+        sys.exit(5)
+
+    try:
+        deps = parse_cargo_toml_for_deps(cargo_path)
+    except Exception as e:
+        cleanup_cb()
+        print(f"[ERROR] parse cargo: {e}")
+        sys.exit(6)
+
+    print("=== DIRECT DEPENDENCIES ===")
+    if deps:
+        for d, v in deps.items():
+            print(f"- {d}: {v}")
+    else:
+        print("(no direct dependencies)")
+    print("===========================\n")
+
+    # === ЭТАП 3: Граф зависимостей ===
+    dot = build_dot(cfg.get("name") or "root", deps)
+
+    out_file = cfg.get("out_file", "outputs/graph.png")
+    try:
+        save_dot_and_png(dot, out_file)
+        print(f"[OK] PNG graph saved: {out_file}")
+    except Exception as e:
+        print(f"[WARN] PNG generation failed: {e}")
+        print("Saving DOT instead.")
+        with open(out_file + ".dot", "w", encoding="utf-8") as f:
+            f.write(dot)
+        print(f"[OK] DOT saved: {out_file}.dot")
+
+    cleanup_cb()
 
 
 if __name__ == "__main__":
