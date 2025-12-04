@@ -1,9 +1,8 @@
 import csv
-import os
 import sys
 import requests
 import graphviz
-
+import os
 
 def read_config(path: str) -> dict:
     try:
@@ -22,19 +21,16 @@ def read_config(path: str) -> dict:
             continue
         cfg[key] = value
 
+    cfg.setdefault("repo", "https://crates.io/api/v1/crates")
+    cfg.setdefault("mode", "url")
     cfg.setdefault("output", "deps")
     cfg.setdefault("deep", "3")
     cfg.setdefault("filter", "")
-    cfg.setdefault("mode", "file")
 
-    for key in ("package_name", "repo", "mode", "version"):
+    for key in ("package_name", "version"):
         if not cfg.get(key):
             print(f"Ошибка: параметр '{key}' обязателен")
             sys.exit(1)
-
-    if cfg["mode"] not in ("file", "url"):
-        print("Ошибка: mode должен быть 'file' или 'url'")
-        sys.exit(1)
 
     try:
         cfg["deep"] = int(cfg["deep"])
@@ -47,71 +43,33 @@ def read_config(path: str) -> dict:
     return cfg
 
 
-def load_lock(cfg: dict) -> str:
-    if cfg["mode"] == "file":
-        path = cfg["repo"]
-        if os.path.isdir(path):
-            path = os.path.join(path, "Cargo.lock")
-        if not os.path.exists(path):
-            print(f"Ошибка: не найден файл {path}")
-            sys.exit(1)
-        with open(path, encoding="utf-8") as f:
-            return f.read()
-    else:
-        try:
-            resp = requests.get(cfg["repo"], timeout=15)
-            resp.raise_for_status()
-            return resp.text
-        except requests.RequestException as e:
-            print(f"Ошибка загрузки по URL: {e}")
-            sys.exit(1)
+def fetch_dependencies(cfg: dict) -> list[str]:
+    base = cfg["repo"].rstrip("/")
+    name = cfg["package_name"]
+    version = cfg["version"]
+    url = f"{base}/{name}/{version}/dependencies"
 
+    try:
+        resp = requests.get(url, timeout=15)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        print(f"Ошибка запроса к репозиторию: {e}")
+        print(f"URL: {url}")
+        sys.exit(1)
 
-def parse_lock(text: str) -> dict[tuple[str, str], list[str]]:
-    result: dict[tuple[str, str], list[str]] = {}
+    try:
+        data = resp.json()
+    except ValueError:
+        print("Ошибка: сервер вернул невалидный JSON")
+        sys.exit(1)
 
-    name = None
-    version = None
-    deps: list[str] = []
-    in_deps = False
+    deps = []
+    for item in data.get("dependencies", []):
+        crate = item.get("crate_id")
+        if crate:
+            deps.append(crate)
 
-    for raw in text.splitlines():
-        line = raw.strip()
-
-        if line == "[[package]]":
-            if name and version:
-                result[(name, version)] = deps
-            name, version, deps, in_deps = None, None, [], False
-            continue
-
-        if line.startswith("name ="):
-            value = line.split("=", 1)[1].strip()
-            name = value.strip('"')
-            continue
-
-        if line.startswith("version ="):
-            value = line.split("=", 1)[1].strip()
-            version = value.strip('"')
-            continue
-
-        if line.startswith("dependencies = ["):
-            in_deps = True
-            if line.rstrip().endswith("]"):
-                in_deps = False
-            continue
-
-        if in_deps:
-            if line.startswith("]"):
-                in_deps = False
-            elif '"' in line:
-                dep_full = line.split('"')[1]
-                dep_name = dep_full.split()[0]
-                deps.append(dep_name)
-
-    if name and version:
-        result[(name, version)] = deps
-
-    return result
+    return deps
 
 
 def build_graph(root: str, deps: list[str], flt: str) -> str:
@@ -133,15 +91,8 @@ def main() -> None:
     for k, v in cfg.items():
         print(f"{k} = {v}")
 
-    lock_text = load_lock(cfg)
-    all_deps = parse_lock(lock_text)
+    deps = fetch_dependencies(cfg)
 
-    key = (cfg["package_name"], cfg["version"])
-    if key not in all_deps:
-        print("Ошибка: указанная комбинация name+version не найдена в Cargo.lock")
-        sys.exit(1)
-
-    deps = all_deps[key]
     print("\nПрямые зависимости пакета:")
     if deps:
         for d in deps:
