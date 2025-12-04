@@ -1,8 +1,8 @@
 key,value
-package_name,ignore
-repo,https://raw.githubusercontent.com/BurntSushi/ripgrep/master/Cargo.lock
+package_name,axum
+repo,https://crates.io/api/v1/crates
 mode,url
-version,0.4.25
-output,graph
+version,0.8.7
+output,axum_graph
 deep,3
 filter,
